@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>fr.gaellalire.vestige</groupId>
   <artifactId>vestige.plugin.verify</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
   <name>Vestige :: Plugin :: Verify</name>
   <build>
@@ -224,7 +224,7 @@
   <scm>
     <connection>scm:git:git@gaellalire.fr:vestige/vestige.plugin.verify.git</connection>
     <developerConnection>scm:git:git@gaellalire.fr:vestige/vestige.plugin.verify.git</developerConnection>
-    <tag>vestige.plugin.verify-1.0.0</tag>
+    <tag>HEAD</tag>
   </scm>
   <reporting>
     <plugins>
