@@ -1,0 +1,11 @@
+<jaxb:bindings xmlns:jaxb="http://java.sun.com/xml/ns/jaxb" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xjc="http://java.sun.com/xml/ns/jaxb/xjc"
+  xmlns:vu="http://gaellalire.fr/vestige/UTILS" jaxb:extensionBindingPrefixes="xjc" jaxb:version="2.0">
+
+  <jaxb:bindings scd="x-schema::a" xmlns:a="http://gaellalire.fr/vestige/VERIFY">
+    <jaxb:schemaBindings>
+      <jaxb:package name="fr.gaellalire.vestige.plugin.schema.verify" />
+    </jaxb:schemaBindings>
+  </jaxb:bindings>
+
+</jaxb:bindings>
+
