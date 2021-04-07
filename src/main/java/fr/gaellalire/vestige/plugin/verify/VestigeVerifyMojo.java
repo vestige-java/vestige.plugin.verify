@@ -30,6 +30,7 @@ import java.net.URLClassLoader;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
@@ -46,6 +47,7 @@ import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
@@ -95,6 +97,9 @@ public class VestigeVerifyMojo extends AbstractMojo {
         Security.addProvider(new BouncyCastleProvider());
     }
 
+    @Parameter(defaultValue = "${project}", readonly = true, required = true)
+    private MavenProject project;
+
     @Component
     private RepositorySystem repositorySystem;
 
@@ -109,6 +114,11 @@ public class VestigeVerifyMojo extends AbstractMojo {
      */
     @Parameter(required = true)
     private Verification[] verifications;
+
+    @Parameter(defaultValue = "10.2.2")
+    private String vestigeVersion;
+
+    private Properties properties;
 
     public void setVerifications(final Verification[] verifications) {
         this.verifications = verifications;
@@ -129,7 +139,12 @@ public class VestigeVerifyMojo extends AbstractMojo {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
 
-        Artifact aetherArtifact = new DefaultArtifact("fr.gaellalire.vestige", "vestige.resolver.maven", null, "jar", "10.2.1");
+        properties = new Properties(project.getProperties());
+        properties.put("project.groupId", project.getGroupId());
+        properties.put("project.artifactId", project.getArtifactId());
+        properties.put("project.version", project.getVersion());
+
+        Artifact aetherArtifact = new DefaultArtifact("fr.gaellalire.vestige", "vestige.resolver.maven", null, "jar", vestigeVersion);
 
         try {
             CollectRequest collectRequest = new CollectRequest(new Dependency(aetherArtifact, JavaScopes.RUNTIME), remoteRepositories);
@@ -200,6 +215,13 @@ public class VestigeVerifyMojo extends AbstractMojo {
         return ((JAXBElement<Verify>) unMarshaller.unmarshal(inputStream)).getValue();
     }
 
+    public String getString(final String value) {
+        if (value == null) {
+            return null;
+        }
+        return PropertyExpander.expand(value, properties);
+    }
+
     public void execute(final VestigeMavenResolver mavenArtifactResolver) throws Exception {
         for (Verification verification : verifications) {
 
@@ -222,28 +244,33 @@ public class VestigeVerifyMojo extends AbstractMojo {
                     for (Object object : mavenConfig.getModifyDependencyOrReplaceDependencyOrAdditionalRepository()) {
                         if (object instanceof ModifyDependency) {
                             ModifyDependency modifyDependency = (ModifyDependency) object;
-                            ModifyDependencyRequest modifyDependencyRequest = mavenContextBuilder.addModifyDependency(modifyDependency.getGroupId(),
-                                    modifyDependency.getArtifactId());
+                            ModifyDependencyRequest modifyDependencyRequest = mavenContextBuilder.addModifyDependency(getString(modifyDependency.getGroupId()),
+                                    getString(modifyDependency.getArtifactId()));
                             AddDependency patch = modifyDependency.getPatch();
-                            modifyDependencyRequest.setPatch(patch.getGroupId(), patch.getArtifactId(), patch.getVersion());
+                            if (patch != null) {
+                                modifyDependencyRequest.setPatch(getString(patch.getGroupId()), getString(patch.getArtifactId()), getString(patch.getVersion()));
+                            }
                             for (AddDependency addDependency : modifyDependency.getAddDependency()) {
-                                modifyDependencyRequest.addDependency(addDependency.getGroupId(), addDependency.getArtifactId(), addDependency.getVersion());
+                                modifyDependencyRequest.addDependency(getString(addDependency.getGroupId()), getString(addDependency.getArtifactId()),
+                                        getString(addDependency.getVersion()));
                             }
                             modifyDependencyRequest.execute();
                         } else if (object instanceof ReplaceDependency) {
                             ReplaceDependency replaceDependency = (ReplaceDependency) object;
-                            ReplaceDependencyRequest replaceDependencyRequest = mavenContextBuilder.addReplaceDependency(replaceDependency.getGroupId(),
-                                    replaceDependency.getArtifactId());
+                            ReplaceDependencyRequest replaceDependencyRequest = mavenContextBuilder.addReplaceDependency(getString(replaceDependency.getGroupId()),
+                                    getString(replaceDependency.getArtifactId()));
                             for (AddDependency addDependency : replaceDependency.getAddDependency()) {
-                                replaceDependencyRequest.addDependency(addDependency.getGroupId(), addDependency.getArtifactId(), addDependency.getVersion());
+                                replaceDependencyRequest.addDependency(getString(addDependency.getGroupId()), getString(addDependency.getArtifactId()),
+                                        getString(addDependency.getVersion()));
                             }
                             for (ExceptIn exceptIn : replaceDependency.getExceptIn()) {
-                                replaceDependencyRequest.addExcept(exceptIn.getGroupId(), exceptIn.getArtifactId());
+                                replaceDependencyRequest.addExcept(getString(exceptIn.getGroupId()), getString(exceptIn.getArtifactId()));
                             }
                             replaceDependencyRequest.execute();
                         } else if (object instanceof AdditionalRepository) {
                             AdditionalRepository additionalRepository = (AdditionalRepository) object;
-                            mavenContextBuilder.addAdditionalRepository(additionalRepository.getId(), additionalRepository.getLayout(), additionalRepository.getUrl());
+                            mavenContextBuilder.addAdditionalRepository(getString(additionalRepository.getId()), getString(additionalRepository.getLayout()),
+                                    getString(additionalRepository.getUrl()));
                         }
 
                     }
@@ -256,9 +283,9 @@ public class VestigeVerifyMojo extends AbstractMojo {
 
             MavenClassType mavenResolver = attachment.getMavenResolver();
             if (mavenResolver != null) {
-                ResolveMavenArtifactRequest resolveMavenArtifactRequest = mavenContext.resolve(mavenResolver.getGroupId(), mavenResolver.getArtifactId(),
-                        mavenResolver.getVersion());
-                resolveMavenArtifactRequest.setExtension(mavenResolver.getExtension());
+                ResolveMavenArtifactRequest resolveMavenArtifactRequest = mavenContext.resolve(getString(mavenResolver.getGroupId()), getString(mavenResolver.getArtifactId()),
+                        getString(mavenResolver.getVersion()));
+                resolveMavenArtifactRequest.setExtension(getString(mavenResolver.getExtension()));
                 ResolvedMavenArtifact resolvedMavenArtifact = resolveMavenArtifactRequest.execute(DummyJobHelper.INSTANCE);
                 Mode mode = mavenResolver.getMode();
                 ResolveMode resolveMode;
@@ -277,15 +304,21 @@ public class VestigeVerifyMojo extends AbstractMojo {
                 String verificationMetadata = resolvedClassLoaderConfiguration.createVerificationMetadata();
 
                 File verificationMetadataFile = verification.getVerificationMetadataFile();
-                File parentFile = verificationMetadataFile.getParentFile();
-                if (!parentFile.isDirectory()) {
-                    parentFile.mkdirs();
+                if (verificationMetadataFile != null) {
+                    File parentFile = verificationMetadataFile.getParentFile();
+                    if (!parentFile.isDirectory()) {
+                        parentFile.mkdirs();
+                    }
+                    BufferedWriter bufferedOutputStream = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(verificationMetadataFile), "UTF-8"));
+                    try {
+                        bufferedOutputStream.write(verificationMetadata);
+                    } finally {
+                        bufferedOutputStream.close();
+                    }
                 }
-                BufferedWriter bufferedOutputStream = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(verificationMetadataFile), "UTF-8"));
-                try {
-                    bufferedOutputStream.write(verificationMetadata);
-                } finally {
-                    bufferedOutputStream.close();
+                String mavenPropertyName = verification.getMavenPropertyName();
+                if (mavenPropertyName != null) {
+                    project.getProperties().setProperty(mavenPropertyName, verificationMetadata);
                 }
             }
         }

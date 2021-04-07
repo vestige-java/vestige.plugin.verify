@@ -28,6 +28,8 @@ public class Verification {
 
     private File verificationMetadataFile;
 
+    private String mavenPropertyName;
+
     public File getVerifyFile() {
         return verifyFile;
     }
@@ -42,5 +44,13 @@ public class Verification {
 
     public void setVerificationMetadataFile(final File verificationMetadataFile) {
         this.verificationMetadataFile = verificationMetadataFile;
+    }
+
+    public String getMavenPropertyName() {
+        return mavenPropertyName;
+    }
+
+    public void setMavenPropertyName(final String mavenPropertyName) {
+        this.mavenPropertyName = mavenPropertyName;
     }
 }
