@@ -115,7 +115,7 @@ public class VestigeVerifyMojo extends AbstractMojo {
     @Parameter(required = true)
     private Verification[] verifications;
 
-    @Parameter(defaultValue = "10.5.0")
+    @Parameter(defaultValue = "10.5.1")
     private String vestigeVersion;
 
     private Properties properties;

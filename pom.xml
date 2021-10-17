@@ -310,7 +310,7 @@
     <dependency>
       <groupId>fr.gaellalire.vestige</groupId>
       <artifactId>vestige.spi.resolver.maven</artifactId>
-      <version>3.0</version>
+      <version>3.1</version>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
