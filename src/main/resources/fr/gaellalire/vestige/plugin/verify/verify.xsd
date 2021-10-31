@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" xmlns:tns="http://gaellalire.fr/vestige/VERIFY"
-  xmlns:vu="http://gaellalire.fr/vestige/UTILS" xmlns="http://gaellalire.fr/vestige/VERIFY" targetNamespace="http://gaellalire.fr/vestige/VERIFY" version="1.0.0">
+  xmlns:vu="http://gaellalire.fr/vestige/UTILS" xmlns="http://gaellalire.fr/vestige/VERIFY" targetNamespace="http://gaellalire.fr/vestige/VERIFY" version="1.1.0">
 
   <xs:element name="verify" type="Verify">
     <xs:annotation>
@@ -70,6 +70,7 @@
     <xs:attribute name="artifactId" type="xs:string" use="required" />
     <xs:attribute name="version" type="xs:string" use="required" />
     <xs:attribute name="extension" type="xs:string" use="optional" default="jar" />
+    <xs:attribute name="classifier" type="xs:string" use="optional" />
     <xs:attribute name="mode" type="Mode" default="FIXED_DEPENDENCIES" />
   </xs:complexType>
 

@@ -115,7 +115,7 @@ public class VestigeVerifyMojo extends AbstractMojo {
     @Parameter(required = true)
     private Verification[] verifications;
 
-    @Parameter(defaultValue = "10.5.1")
+    @Parameter(defaultValue = "10.6.0")
     private String vestigeVersion;
 
     private Properties properties;
@@ -286,6 +286,10 @@ public class VestigeVerifyMojo extends AbstractMojo {
                 ResolveMavenArtifactRequest resolveMavenArtifactRequest = mavenContext.resolve(getString(mavenResolver.getGroupId()), getString(mavenResolver.getArtifactId()),
                         getString(mavenResolver.getVersion()));
                 resolveMavenArtifactRequest.setExtension(getString(mavenResolver.getExtension()));
+                String classifier = getString(mavenResolver.getClassifier());
+                if (classifier != null) {
+                    resolveMavenArtifactRequest.setClassifier(classifier);
+                }
                 ResolvedMavenArtifact resolvedMavenArtifact = resolveMavenArtifactRequest.execute(DummyJobHelper.INSTANCE);
                 Mode mode = mavenResolver.getMode();
                 ResolveMode resolveMode;
