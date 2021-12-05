@@ -115,7 +115,7 @@ public class VestigeVerifyMojo extends AbstractMojo {
     @Parameter(required = true)
     private Verification[] verifications;
 
-    @Parameter(defaultValue = "10.6.0")
+    @Parameter(defaultValue = "10.7.0")
     private String vestigeVersion;
 
     private Properties properties;
@@ -245,26 +245,26 @@ public class VestigeVerifyMojo extends AbstractMojo {
                         if (object instanceof ModifyDependency) {
                             ModifyDependency modifyDependency = (ModifyDependency) object;
                             ModifyDependencyRequest modifyDependencyRequest = mavenContextBuilder.addModifyDependency(getString(modifyDependency.getGroupId()),
-                                    getString(modifyDependency.getArtifactId()));
+                                    getString(modifyDependency.getArtifactId()), getString(modifyDependency.getClassifier()));
                             AddDependency patch = modifyDependency.getPatch();
                             if (patch != null) {
                                 modifyDependencyRequest.setPatch(getString(patch.getGroupId()), getString(patch.getArtifactId()), getString(patch.getVersion()));
                             }
                             for (AddDependency addDependency : modifyDependency.getAddDependency()) {
                                 modifyDependencyRequest.addDependency(getString(addDependency.getGroupId()), getString(addDependency.getArtifactId()),
-                                        getString(addDependency.getVersion()));
+                                        getString(addDependency.getVersion()), "jar", getString(addDependency.getClassifier()));
                             }
                             modifyDependencyRequest.execute();
                         } else if (object instanceof ReplaceDependency) {
                             ReplaceDependency replaceDependency = (ReplaceDependency) object;
                             ReplaceDependencyRequest replaceDependencyRequest = mavenContextBuilder.addReplaceDependency(getString(replaceDependency.getGroupId()),
-                                    getString(replaceDependency.getArtifactId()));
+                                    getString(replaceDependency.getArtifactId()), getString(replaceDependency.getClassifier()));
                             for (AddDependency addDependency : replaceDependency.getAddDependency()) {
                                 replaceDependencyRequest.addDependency(getString(addDependency.getGroupId()), getString(addDependency.getArtifactId()),
-                                        getString(addDependency.getVersion()));
+                                        getString(addDependency.getVersion()), "jar", getString(addDependency.getClassifier()));
                             }
                             for (ExceptIn exceptIn : replaceDependency.getExceptIn()) {
-                                replaceDependencyRequest.addExcept(getString(exceptIn.getGroupId()), getString(exceptIn.getArtifactId()));
+                                replaceDependencyRequest.addExcept(getString(exceptIn.getGroupId()), getString(exceptIn.getArtifactId()), getString(exceptIn.getClassifier()));
                             }
                             replaceDependencyRequest.execute();
                         } else if (object instanceof AdditionalRepository) {
