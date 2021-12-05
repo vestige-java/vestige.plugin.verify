@@ -170,6 +170,9 @@ public class VestigeVerifyMojo extends AbstractMojo {
             ClassLoader classLoader = new URLClassLoader(urlList.toArray(new URL[urlList.size()]), systemClassLoader.getParent()) {
                 @Override
                 public Class<?> loadClass(final String name) throws ClassNotFoundException {
+                    if (name.startsWith("org.slf4j")) {
+                        return VestigeVerifyMojo.class.getClassLoader().loadClass(name);
+                    }
                     if (name.startsWith("fr.gaellalire.vestige.core")) {
                         return VestigeVerifyMojo.class.getClassLoader().loadClass(name);
                     }
