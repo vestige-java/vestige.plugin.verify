@@ -31,11 +31,20 @@ import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
@@ -61,6 +70,8 @@ import org.eclipse.aether.resolution.DependencyRequest;
 import org.eclipse.aether.resolution.DependencyResult;
 import org.eclipse.aether.util.artifact.JavaScopes;
 import org.eclipse.aether.util.graph.visitor.PreorderNodeListGenerator;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import fr.gaellalire.vestige.plugin.schema.verify.AddDependency;
 import fr.gaellalire.vestige.plugin.schema.verify.AdditionalRepository;
@@ -73,6 +84,7 @@ import fr.gaellalire.vestige.plugin.schema.verify.Mode;
 import fr.gaellalire.vestige.plugin.schema.verify.ModifyDependency;
 import fr.gaellalire.vestige.plugin.schema.verify.ObjectFactory;
 import fr.gaellalire.vestige.plugin.schema.verify.ReplaceDependency;
+import fr.gaellalire.vestige.plugin.schema.verify.SetClassifierToExtension;
 import fr.gaellalire.vestige.plugin.schema.verify.Verify;
 import fr.gaellalire.vestige.spi.job.DummyJobHelper;
 import fr.gaellalire.vestige.spi.resolver.ResolvedClassLoaderConfiguration;
@@ -85,6 +97,7 @@ import fr.gaellalire.vestige.spi.resolver.maven.ReplaceDependencyRequest;
 import fr.gaellalire.vestige.spi.resolver.maven.ResolveMavenArtifactRequest;
 import fr.gaellalire.vestige.spi.resolver.maven.ResolveMode;
 import fr.gaellalire.vestige.spi.resolver.maven.ResolvedMavenArtifact;
+import fr.gaellalire.vestige.spi.resolver.maven.SetClassifierToExtensionRequest;
 import fr.gaellalire.vestige.spi.resolver.maven.VestigeMavenResolver;
 
 /**
@@ -92,6 +105,8 @@ import fr.gaellalire.vestige.spi.resolver.maven.VestigeMavenResolver;
  */
 @Mojo(name = "create-verification-metadata", defaultPhase = LifecyclePhase.GENERATE_RESOURCES)
 public class VestigeVerifyMojo extends AbstractMojo {
+
+    public static final Pattern MVN_URL_PATTERN = Pattern.compile("mvn:([^/]*)/([^/]*)/([^/]*)(?:/([^/]*)(?:/([^/]*))?)?");
 
     static {
         Security.addProvider(new BouncyCastleProvider());
@@ -270,6 +285,14 @@ public class VestigeVerifyMojo extends AbstractMojo {
                                 replaceDependencyRequest.addExcept(getString(exceptIn.getGroupId()), getString(exceptIn.getArtifactId()), getString(exceptIn.getClassifier()));
                             }
                             replaceDependencyRequest.execute();
+                        } else if (object instanceof SetClassifierToExtension) {
+                            SetClassifierToExtension setClassifierToExtension = (SetClassifierToExtension) object;
+                            SetClassifierToExtensionRequest setClassifierToExtensionRequest = mavenContextBuilder
+                                    .setClassifierToExtension(getString(setClassifierToExtension.getExtension()), getString(setClassifierToExtension.getClassifier()));
+                            for (ExceptIn exceptIn : setClassifierToExtension.getExceptFor()) {
+                                setClassifierToExtensionRequest.addExcept(getString(exceptIn.getGroupId()), getString(exceptIn.getArtifactId()));
+                            }
+                            setClassifierToExtensionRequest.execute();
                         } else if (object instanceof AdditionalRepository) {
                             AdditionalRepository additionalRepository = (AdditionalRepository) object;
                             mavenContextBuilder.addAdditionalRepository(getString(additionalRepository.getId()), getString(additionalRepository.getLayout()),
@@ -308,10 +331,13 @@ public class VestigeVerifyMojo extends AbstractMojo {
                 CreateClassLoaderConfigurationRequest classLoaderConfigurationRequest = resolvedMavenArtifact.createClassLoaderConfiguration("attachment", resolveMode,
                         Scope.ATTACHMENT);
                 ResolvedClassLoaderConfiguration resolvedClassLoaderConfiguration = classLoaderConfigurationRequest.execute();
+                getLog().info(resolvedClassLoaderConfiguration.toString());
                 String verificationMetadata = resolvedClassLoaderConfiguration.createVerificationMetadata();
 
+                File xslFile = verification.getXslFile();
+
                 File verificationMetadataFile = verification.getVerificationMetadataFile();
-                if (verificationMetadataFile != null) {
+                if (verificationMetadataFile != null && xslFile == null) {
                     File parentFile = verificationMetadataFile.getParentFile();
                     if (!parentFile.isDirectory()) {
                         parentFile.mkdirs();
@@ -327,6 +353,109 @@ public class VestigeVerifyMojo extends AbstractMojo {
                 if (mavenPropertyName != null) {
                     project.getProperties().setProperty(mavenPropertyName, verificationMetadata);
                 }
+
+                Document document = null;
+                Element verificationMetadatasElement = null;
+
+                if (xslFile != null) {
+                    document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
+                    verificationMetadatasElement = document.createElement("verificationMetadatas");
+
+                    Element verificationMetadataElement = document.createElement("verificationMetadata");
+                    verificationMetadataElement.setAttribute("groupId", resolvedMavenArtifact.getGroupId());
+                    verificationMetadataElement.setAttribute("artifactId", resolvedMavenArtifact.getArtifactId());
+                    verificationMetadataElement.setAttribute("version", resolvedMavenArtifact.getVersion());
+                    verificationMetadataElement.setAttribute("classifier", resolvedMavenArtifact.getClassifier());
+                    verificationMetadataElement.appendChild(document.createTextNode(verificationMetadata));
+                    verificationMetadatasElement.appendChild(verificationMetadataElement);
+
+                    document.appendChild(verificationMetadatasElement);
+                }
+
+                // if ear is not exploded then the war will not be attached, it will be loaded from ear content
+                if ("ear".equals(resolvedMavenArtifact.getExtension())) {
+                    Properties explodedProperties = new Properties();
+                    try (ZipInputStream zis = new ZipInputStream(new FileInputStream(resolvedMavenArtifact.getFile()))) {
+                        ZipEntry nextEntry = zis.getNextEntry();
+                        while (nextEntry != null) {
+                            if ("META-INF/exploded-assembly.properties".equals(nextEntry.getName())) {
+                                explodedProperties.load(zis);
+                            }
+                            nextEntry = zis.getNextEntry();
+                        }
+                    }
+
+                    String property = explodedProperties.getProperty("dependencies");
+                    if (property != null) {
+                        for (String dep : property.split(",")) {
+                            String url = explodedProperties.getProperty(dep + ".url");
+                            if (url == null) {
+                                continue;
+                            }
+                            String path = explodedProperties.getProperty(dep + ".name");
+
+                            Matcher matcher = MVN_URL_PATTERN.matcher(url);
+                            if (!matcher.matches()) {
+                                continue;
+                            }
+                            String groupId = matcher.group(1);
+                            String artifactId = matcher.group(2);
+                            String version = matcher.group(3);
+                            String extension = matcher.group(4);
+                            if (!"war".equals(extension)) {
+                                continue;
+                            }
+                            String classifier2 = matcher.group(5);
+
+                            ResolveMavenArtifactRequest depResolveMavenArtifactRequest = mavenContext.resolve(groupId, artifactId, version);
+                            depResolveMavenArtifactRequest.setExtension(extension);
+                            depResolveMavenArtifactRequest.setClassifier(classifier2);
+                            ResolvedMavenArtifact depResolvedMavenArtifact = depResolveMavenArtifactRequest.execute(DummyJobHelper.INSTANCE);
+                            CreateClassLoaderConfigurationRequest warClassLoaderConfigurationRequest = depResolvedMavenArtifact.createClassLoaderConfiguration("attachment",
+                                    resolveMode, Scope.ATTACHMENT);
+
+                            String excludedURLs = explodedProperties.getProperty(dep + ".repackage.excludedURLs");
+                            if (excludedURLs != null) {
+                                for (String excludedURL : excludedURLs.split(",")) {
+                                    String property2 = explodedProperties.getProperty(excludedURL);
+                                    Matcher matcher2 = MVN_URL_PATTERN.matcher(property2);
+                                    if (matcher2.matches()) {
+                                        String groupId2 = matcher2.group(1);
+                                        String artifactId2 = matcher2.group(2);
+                                        String extension2 = matcher2.group(4);
+                                        String classifier3 = matcher2.group(5);
+
+                                        warClassLoaderConfigurationRequest.addExclude(groupId2, artifactId2, extension2, classifier3);
+                                    }
+
+                                }
+                            }
+
+                            ResolvedClassLoaderConfiguration warResolvedClassLoaderConfiguration = warClassLoaderConfigurationRequest.execute();
+                            String warVerificationMetadata = warResolvedClassLoaderConfiguration.createVerificationMetadata();
+                            if (document != null) {
+                                Element verificationMetadataElement = document.createElement("warVerificationMetadata");
+                                verificationMetadataElement.setAttribute("path", path);
+                                verificationMetadataElement.setAttribute("groupId", depResolvedMavenArtifact.getGroupId());
+                                verificationMetadataElement.setAttribute("artifactId", depResolvedMavenArtifact.getArtifactId());
+                                verificationMetadataElement.setAttribute("version", depResolvedMavenArtifact.getVersion());
+                                verificationMetadataElement.setAttribute("classifier", depResolvedMavenArtifact.getClassifier());
+                                verificationMetadataElement.appendChild(document.createTextNode(warVerificationMetadata));
+
+                                verificationMetadatasElement.appendChild(verificationMetadataElement);
+                            }
+
+                        }
+
+                    }
+                }
+
+                if (document != null) {
+                    TransformerFactory transformerFactory = TransformerFactory.newInstance();
+                    Transformer transformer = transformerFactory.newTransformer(new StreamSource(xslFile));
+                    transformer.transform(new DOMSource(document), new StreamResult(verificationMetadataFile));
+                }
+
             }
         }
 

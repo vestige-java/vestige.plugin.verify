@@ -118,13 +118,13 @@
           <enableRulesSummary>false</enableRulesSummary>
           <violationSeverity>warning</violationSeverity>
         </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
+<!--         <executions> -->
+<!--           <execution> -->
+<!--             <goals> -->
+<!--               <goal>check</goal> -->
+<!--             </goals> -->
+<!--           </execution> -->
+<!--         </executions> -->
       </plugin>
       <plugin>
         <artifactId>maven-gpg-plugin</artifactId>

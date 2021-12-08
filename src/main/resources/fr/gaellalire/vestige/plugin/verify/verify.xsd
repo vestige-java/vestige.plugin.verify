@@ -126,6 +126,14 @@
     <xs:attribute name="classifier" type="xs:string" use="optional" />
   </xs:complexType>
 
+  <xs:complexType name="SetClassifierToExtension">
+    <xs:sequence>
+      <xs:element name="exceptFor" type="ExceptIn" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="extension" type="xs:string" use="required" />
+    <xs:attribute name="classifier" type="xs:string" use="required" />
+  </xs:complexType>
+
   <xs:complexType name="AdditionalRepository">
     <xs:attribute name="id" type="xs:string" use="required" />
     <xs:attribute name="layout" type="xs:string" />
@@ -137,6 +145,7 @@
       <xs:element name="modifyDependency" type="ModifyDependency" />
       <xs:element name="replaceDependency" type="ReplaceDependency" />
       <xs:element name="additionalRepository" type="AdditionalRepository" />
+      <xs:element name="setClassifierToExtension" type="SetClassifierToExtension" />
     </xs:choice>
     <xs:attribute name="superPomRepositoriesUsed" type="xs:boolean" use="optional" default="true" />
     <xs:attribute name="pomRepositoriesIgnored" type="xs:boolean" use="optional" default="false" />
