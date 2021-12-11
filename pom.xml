@@ -169,7 +169,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <slf4j.version>1.7.25</slf4j.version>
-    <vestige.core.version>10</vestige.core.version>
+    <vestige.core.version>16</vestige.core.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -313,7 +313,7 @@
     <dependency>
       <groupId>fr.gaellalire.vestige</groupId>
       <artifactId>vestige.spi.resolver.maven</artifactId>
-      <version>3.3-SNAPSHOT</version>
+      <version>3.3</version>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
