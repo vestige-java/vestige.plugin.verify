@@ -270,7 +270,7 @@ public class VestigeVerifyMojo extends AbstractMojo {
                             }
                             for (AddDependency addDependency : modifyDependency.getAddDependency()) {
                                 modifyDependencyRequest.addDependency(getString(addDependency.getGroupId()), getString(addDependency.getArtifactId()),
-                                        getString(addDependency.getVersion()), "jar", getString(addDependency.getClassifier()));
+                                        getString(addDependency.getVersion()), getString(addDependency.getExtension()), getString(addDependency.getClassifier()));
                             }
                             modifyDependencyRequest.execute();
                         } else if (object instanceof ReplaceDependency) {
@@ -279,7 +279,7 @@ public class VestigeVerifyMojo extends AbstractMojo {
                                     getString(replaceDependency.getArtifactId()), getString(replaceDependency.getClassifier()));
                             for (AddDependency addDependency : replaceDependency.getAddDependency()) {
                                 replaceDependencyRequest.addDependency(getString(addDependency.getGroupId()), getString(addDependency.getArtifactId()),
-                                        getString(addDependency.getVersion()), "jar", getString(addDependency.getClassifier()));
+                                        getString(addDependency.getVersion()), getString(addDependency.getExtension()), getString(addDependency.getClassifier()));
                             }
                             for (ExceptIn exceptIn : replaceDependency.getExceptIn()) {
                                 replaceDependencyRequest.addExcept(getString(exceptIn.getGroupId()), getString(exceptIn.getArtifactId()), getString(exceptIn.getClassifier()));

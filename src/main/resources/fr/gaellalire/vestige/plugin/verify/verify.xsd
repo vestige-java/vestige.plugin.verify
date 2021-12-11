@@ -86,6 +86,7 @@
     <xs:attribute name="groupId" type="xs:string" use="required" />
     <xs:attribute name="artifactId" type="xs:string" use="required" />
     <xs:attribute name="version" type="xs:string" use="required" />
+    <xs:attribute name="extension" type="xs:string" use="optional" />
     <xs:attribute name="classifier" type="xs:string" use="optional" />
   </xs:complexType>
 
